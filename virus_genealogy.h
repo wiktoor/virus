@@ -1,7 +1,8 @@
-#ifdef VIRUS_GENEALOGY_H
+#ifndef VIRUS_GENEALOGY_H
 #define VIRUS_GENEALOGY_H
 
 #include <vector>
+#include <memory>
 
 template<typename Virus>
 class VirusGenealogy {
@@ -9,10 +10,10 @@ class VirusGenealogy {
         class Node {
             private:
                 Virus virus;
-                std::vector<std::shared_ptr<Node>> children;
-                std::vector<std::weak_ptr<Node>> parents;
-        }
+                // powinniśmy przechowywać vector identyfikatorow
+            public:
+        };
         
-}
+};
 
 #endif /* VIRUS_GENEALOGY_H */
