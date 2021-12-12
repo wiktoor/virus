@@ -11,32 +11,29 @@ class VirusGenealogy {
     private:
         Virus::id_type stem_id;
         class Node {
-            private:
-                std::shared_ptr<Virus> virus_ptr;
-                std::vector<typename Virus::id_type> parents;
-                std::vector<std::shared_ptr<Virus>> children;
             public:
-                Node(const Virus::id_type &id) : virus_ptr(std::make_shared<Virus>(id)) {}
-                // funkcje do testowania
-                void printNode() {
-                    std::cout << virus_ptr->get_id() << std::endl;
-                    for (auto id : parents) std::cout << id << " ";
-                    std::cout << std::endl;
-                    for (auto ptr : children) std::cout << ptr->get_id() << " ";
-                    std::cout << std::endl;
-                }
+                Virus virus;
+                std::vector<std::weak_ptr<Node>> parents;
+                std::vector<std::shared_ptr<Node>> children;
+                Node(const Virus::id_type &id) : virus(Virus(id)) {}
         };
         std::map<typename Virus::id_type, Node> nodes;
     public:
+        // using children_iterator = std::vector<std::shared_ptr<Virus>>::iterator;
         VirusGenealogy(Virus::id_type const &stem_id) : stem_id(stem_id) {
             nodes.emplace(stem_id, Node(stem_id));
         }
         Virus::id_type get_stem_id() const {
             return stem_id;
         }
-        // funkcje do testowania
-        void print(Virus::id_type const &id) {
-            nodes.at(id).printNode();
+        std::vector<typename Virus::id_type> get_parents(Virus::id_type const &id) const {
+            // TODO: sprawdzić, czy jest w tej mapie
+            Node node = nodes.at(id);
+            std::vector<typename Virus::id_type> result;
+            for (auto parent : node.parents) {
+                result.push_back(parent->virus.get_id());
+            }
+            return result;
         }
 };
 
