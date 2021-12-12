@@ -38,6 +38,10 @@ class VirusGenealogy {
         bool exists(Virus::id_type const &id) const {
             return nodes.contains(id);
         }
+        const Virus& operator[](typename Virus::id_type const &id) const {
+            // TODO: sprawdzić, czy jest w tej mapie
+            return nodes.at(id).virus;
+        }
 };
 
 #endif /* VIRUS_GENEALOGY_H */
