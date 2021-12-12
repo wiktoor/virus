@@ -35,6 +35,9 @@ class VirusGenealogy {
             }
             return result;
         }
+        bool exists(Virus::id_type const &id) const {
+            return nodes.contains(id);
+        }
 };
 
 #endif /* VIRUS_GENEALOGY_H */
