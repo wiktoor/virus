@@ -13,11 +13,33 @@ class VirusGenealogy {
         struct Node {
             Virus virus;
             std::vector<typename Virus::id_type> parents;
-            std::vector<std::shared_ptr<Node>> children;
+            std::vector<std::shared_ptr<Virus>> children;
             Node(const Virus::id_type &id) : virus(Virus(id)) {}
         };
         std::map<typename Virus::id_type, Node> nodes;
     public:
+        class children_iterator {
+            private:
+                std::shared_ptr<std::vector<std::shared_ptr<Virus>>> vec;
+                size_t position;
+            public:
+                children_iterator() {}
+                children_iterator(const std::vector<std::shared_ptr<Virus>>& vec, size_t position) : 
+                    vec(std::make_shared<std::vector<std::shared_ptr<Virus>>>(vec)), position(position) {}
+                children_iterator& operator=(const children_iterator& it) {
+                    position = it.position;
+                    vec = it.vec;
+                    return *this;
+                }
+                Virus& operator*() const { return *(vec->at(position)); }
+                std::shared_ptr<Virus> operator->() { return vec->at(position); }
+                children_iterator& operator++() { position++; return *this; }
+                children_iterator operator++(int) { children_iterator tmp = *this; ++(*this); return tmp; }
+                children_iterator& operator--() { position--; return *this; }
+                children_iterator operator--(int) { children_iterator tmp = *this; --(*this); return tmp; }
+                bool operator==(const children_iterator& a) { return this->position == a.position; }
+                bool operator!=(const children_iterator& a) { return !(*this == a); }
+        };
         // using children_iterator = std::vector<std::shared_ptr<Virus>>::iterator;
         VirusGenealogy(Virus::id_type const &stem_id) : stem_id(stem_id) {
             nodes.emplace(stem_id, Node(stem_id));
@@ -36,12 +58,18 @@ class VirusGenealogy {
             // TODO: sprawdzić, czy jest w tej mapie
             return nodes.at(id).virus;
         }
-        // void create(Virus::id_type const &id, Virus::id_type const &parent_id) {
-        //     Node node(id);
-        //     Node parent = nodes.at(parent_id);
-        //     //auto ptr = std::weak_ptr<Node>(parent);
-        //     // node.parents.push_back(std::weak_ptr<Node>(nodes.at(parent_id)));
-        // }
+        VirusGenealogy<Virus>::children_iterator get_children_begin(Virus::id_type const &id) const {
+            return children_iterator(nodes.at(id).children, 0);
+        }
+        VirusGenealogy<Virus>::children_iterator get_children_end(Virus::id_type const &id) const {
+            return children_iterator(nodes.at(id).children, nodes.at(id).children.size());
+        }
+        void create(Virus::id_type const &id, Virus::id_type const &parent_id) {
+            // TODO: co jezeli klucz id jest juz w mapie albo nie ma parent_id
+            nodes.emplace(id, Node(id));
+            nodes.at(id).parents.push_back(parent_id);
+            nodes.at(parent_id).children.push_back(make_shared<Virus>(nodes.at(id).virus));
+        }
 };
 
 #endif /* VIRUS_GENEALOGY_H */
