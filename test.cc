@@ -20,4 +20,5 @@ int main() {
     VirusGenealogy<Virus> gen("1");
     auto x = gen["1"];
     cout << gen.exists("1") << endl;
+    // gen.create("2", "1");
 }
