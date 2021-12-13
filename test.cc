@@ -30,4 +30,12 @@ int main() {
     {
       cout << ch_it->get_id() << endl;
     }
+    gen.connect("2", "3");
+    cout << endl;
+    for (size = 0, ch_it = gen.get_children_begin("3");
+         ch_it != gen.get_children_end("3");
+         ++size, ++ch_it) 
+    {
+      cout << ch_it->get_id() << endl;
+    }
 }

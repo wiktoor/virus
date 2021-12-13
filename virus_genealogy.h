@@ -4,6 +4,7 @@
 #include <vector>
 #include <memory>
 #include <map>
+#include <algorithm>
 #include <iostream> // do usunięcia
 
 template<typename Virus>
@@ -69,6 +70,20 @@ class VirusGenealogy {
             nodes.emplace(id, Node(id));
             nodes.at(id).parents.push_back(parent_id);
             nodes.at(parent_id).children.push_back(make_shared<Virus>(nodes.at(id).virus));
+        }
+        void create(typename Virus::id_type const &id, std::vector<typename Virus::id_type> const &parent_ids) {
+            // TODO: co jezeli klucz id jest juz w mapie albo nie ma parent_id
+            nodes.emplace(id, Node(id));
+            for (typename Virus::id_type parent : parent_ids) {
+                nodes.at(id).parents.push_back(parent);
+                nodes.at(parent).children.push_back(make_shared<Virus>(nodes.at(id).virus));
+            }
+        }
+        void connect(Virus::id_type const &child_id, Virus::id_type const &parent_id) {
+            // TODO: co jezeli klucz id jest juz w mapie albo nie ma parent_id
+            if (std::find(nodes.at(child_id).parents.begin(), nodes.at(child_id).parents.end(), parent_id) != nodes.at(child_id).parents.end()) return;
+            nodes.at(child_id).parents.push_back(parent_id);
+            nodes.at(parent_id).children.push_back(make_shared<Virus>(nodes.at(child_id).virus));
         }
 };
 
