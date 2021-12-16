@@ -16,6 +16,19 @@ class VirusGenealogy {
             std::vector<typename Virus::id_type> parents;
             std::vector<std::shared_ptr<Virus>> children;
             Node(const Virus::id_type &id) : virus(Virus(id)) {}
+            // funkcje do testowania
+            void printNode() {
+                std::cout << "Jestem wierzchołkiem: " << virus.get_id() << std::endl;
+                std::cout << "Moi rodzice to: " << std::endl;
+                for (auto parent : parents) {
+                    std::cout << parent << " ";
+                }
+                std::cout << std::endl << "Moi synowie to: " << std::endl;
+                for (auto ptr : children) {
+                    std::cout << ptr->get_id() << " ";
+                }
+                std::cout << std::endl << std::endl;
+            }
         };
         std::map<typename Virus::id_type, Node> nodes;
     public:
@@ -84,6 +97,36 @@ class VirusGenealogy {
             if (std::find(nodes.at(child_id).parents.begin(), nodes.at(child_id).parents.end(), parent_id) != nodes.at(child_id).parents.end()) return;
             nodes.at(child_id).parents.push_back(parent_id);
             nodes.at(parent_id).children.push_back(make_shared<Virus>(nodes.at(child_id).virus));
+        }
+        void remove(Virus::id_type const &id) {
+            // TODO: co jeżeli taki wirus nie istnieje
+            Node& node = nodes.at(id);
+            // usuwamy krawędzie od rodziców
+            for (typename Virus::id_type parent_id : node.parents) {
+                Node& parent = nodes.at(parent_id);
+                for (size_t i = 0; i < parent.children.size(); i++) {
+                    if (parent.children[i]->get_id() == id) {
+                        swap(parent.children[i], parent.children.back());
+                        parent.children.pop_back();
+                        break; // bo nie ma multikrawędzi
+                    }
+                }
+            }
+            for (auto ptr : node.children) {
+                Node& child = nodes.at(ptr->get_id());
+                auto it = std::find(child.parents.begin(), child.parents.end(), id);
+                child.parents.erase(it);
+                if (!child.parents.size()) remove(child.virus.get_id());
+            }
+            nodes.erase(id);
+        }
+        // funkcje do testowania
+        void printTree(Virus::id_type const &id) {
+            Node& node = nodes.at(id);
+            node.printNode();
+            for (auto ptr : node.children) {
+                printTree(ptr->get_id());
+            }
         }
 };
 
