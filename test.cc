@@ -29,7 +29,7 @@ requires (T x) {
 };
 
 template <typename T>
-concept correctChildrenIterator =  bidirectional_iterator<T> /* && correctType<T> */;
+concept correctChildrenIterator =  bidirectional_iterator<T> && correctType<T>;
 
 template <typename T>
 requires correctChildrenIterator<T>
