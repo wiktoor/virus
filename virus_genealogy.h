@@ -34,16 +34,29 @@ private:
 
     using Virus_ptr_t = std::shared_ptr<Virus>;
     using Virus_ptrs_t = std::vector<Virus_ptr_t>;
-    // USINGI!!!
+    // Przydałyby się jeszcze usingi na Virus::id_type (bo typename'y)
+    // i na std::vector<typename Virus::id_type>. Tylko używając ich
+    // zmieniamy wygląd interfejsu. Na przykład get_parents zwraca
+    // std::vector<typename Virus::id_type>, a jeśli zrobimy usinga,
+    // to będziemy mieć inną nazwę zwracanego typu. Nie wiem, czy tak można.
 
     struct Node {
 
+        // Tutaj typ zmienił się na pointer do wirusa. Możliwe, że wcześniej źle
+        // źle korzystaliśmy z shared pointerów. Funkcja make_shared tworzy nowy
+        // obiekt i zwraca wskaźnik do niego. Czyli nie powinniśmy jej używać,
+        // gdy chcemy stworzyć kolejny wskaźnik do już istniejącego obiektu,
+        // bo stworzyłaby nam nowy, identyczny obiekt. A przynajmniej w teorii
+        // tak mogłoby się stać, bo tego nie wykryliśmy. Tak czy siak, tak jak teraz
+        // mamy na pewno jest dobrze. Wywołujemy make_shared raz w konstruktorze
+        // Noda, a jak potem chcemy nowy wskaźnik do istniejącego wirusa, to
+        // kopiujemy wskaźnik virus_ptr.
         Virus_ptr_t virus_ptr = nullptr;
         std::vector<typename Virus::id_type> parents;
         Virus_ptrs_t children;
 
         // Jeśli make_shared lub konstruktor wirusa rzuci wyjątek, virus_ptr będzie
-        // równy nullptr.
+        // równy nullptr. Nie utworzymy wirusa, wszystko jest ok.
         Node(const Virus::id_type &id) : virus_ptr(std::make_shared<Virus>(id)) {}
 
         // funkcje do testowania
@@ -62,7 +75,9 @@ private:
 
     };
 
-    std::map<typename Virus::id_type, Node> nodes;
+    using Nodes_map_t = std::map<typename Virus::id_type, Node>;
+
+    Nodes_map_t nodes;
 
 public:
 
@@ -139,7 +154,7 @@ public:
         return stem_id;
     }
 
-    // Pozmieniać na iteratory, bo kilka odwołań do tego samego klucza.
+    // Pozmieniać na iteratory w poniższych funkcjach, bo kilka odwołań do tego samego klucza.
     std::vector<typename Virus::id_type> get_parents(Virus::id_type const &id) const {
         if (!nodes.contains(id)) throw VirusNotFound();
         return nodes.at(id).parents;
@@ -153,7 +168,7 @@ public:
         if (!nodes.contains(id))
             throw VirusNotFound();
 
-        return nodes.at(id).virus;
+        return *(nodes.at(id).virus_ptr);
     }
 
     VirusGenealogy<Virus>::children_iterator get_children_begin(Virus::id_type const &id) const {
@@ -177,14 +192,15 @@ public:
         if (!nodes.contains(parent_id))
             throw VirusNotFound();
 
-        // Jeśli konstruktor rzuci wyjątek, to nie ma efektu.
+        // Poniżej wyjątki nie będą miały skutków ubocznych.
         Node node(id);
         node.parents.push_back(parent_id);
         auto parent_it = nodes.find(parent_id);
+        // Tu jest przykład wrzucania kopii shared pointera.
         (parent_it->second).children.push_back(node.virus_ptr);
 
         try {
-            nodes.emplace(id, Node(id));
+            nodes.emplace(id, node);
         }
         catch (...) {
             // pop_back() jest noexpept na niepustym vectorze
@@ -206,24 +222,24 @@ public:
             node.parents.push_back(parent_id);
         }
 
-        std::vector<typename std::map<typename Virus::id_type, Node>::iterator> parents_it(parent_ids.size());
+        std::vector<typename Nodes_map_t::iterator> parents_it(parent_ids.size());
         size_t next_id = 0;
         try {
             for (; next_id < parent_ids.size(); next_id++) {
                 parents_it[next_id] = nodes.find(parent_ids[next_id]);
-                // czy -> rzuca wyjątek?
                 (parents_it[next_id]->second).children.push_back(node.virus_ptr);
             }
-        }
+        } // Tu pewnie jest źle. Operator [] pewnie rzuca wyjątek. Chyba czeka nas działanie na kopii.
         catch (...) {
             for (size_t j = 0; j < next_id; j++) {
+                // czy -> może rzucić wyjątek?
                 (parents_it[j]->second).children.pop_back();
             }
             throw;
         }
 
         try {
-            nodes.emplace(id, Node(id));
+            nodes.emplace(id, node);
         }
         catch (...) {
              for (size_t j = 0; j < parent_ids.size(); j++) {
@@ -233,6 +249,7 @@ public:
         }
     }
 
+    // Tu też iteratory, bo wielokrotne odwoływanie do kluczy child_ir i parent_id.
     void connect(Virus::id_type const &child_id, Virus::id_type const &parent_id) {
         if (!nodes.contains(child_id) || !nodes.contains(parent_id))
             throw VirusNotFound();
@@ -243,16 +260,20 @@ public:
 
         parent_ids.push_back(parent_id);
         try {
-            nodes.at(parent_id).children.push_back(nodes.at(child_id).virus);
+            nodes.at(parent_id).children.push_back(nodes.at(child_id).virus_ptr);
         }
         catch (...) {
             parent_ids.pop_back();
         }
     }
 
+    // Zapowiada się świetna zabawa (:
     void remove(Virus::id_type const &id) {
-        if (id == stem_id) throw TriedToRemoveStemVirus();
-        if (!nodes.contains(id)) throw VirusNotFound();
+        if (id == stem_id)
+            throw TriedToRemoveStemVirus();
+        if (!nodes.contains(id))
+            throw VirusNotFound();
+
         Node& node = nodes.at(id);
         // usuwamy krawędzie od rodziców
         for (typename Virus::id_type parent_id : node.parents) {

@@ -11,6 +11,7 @@ class Virus {
   public:
     using id_type = std::string;
     Virus(id_type const &_id) : id(_id) {
+      cout << "Utworzony: " << id << '\n';
     }
     id_type get_id() const {
       return id;
@@ -66,6 +67,7 @@ int main() {
     {
       cout << ch_it->get_id() << endl;
     }*/
+
     gen.remove("2");
     cout << "------------------------------------------------------\n";
     gen.printTree("1");
