@@ -5,7 +5,20 @@
 #include <memory>
 #include <map>
 #include <algorithm>
+#include <exception>
 #include <iostream> // do usunięcia
+
+struct VirusAlreadyCreated : public std::exception {
+    const char* what() const throw() {
+        return "VirusAlreadyCreated";
+    }
+};
+
+struct VirusNotFound : public std::exception {
+    const char* what() const throw() {
+        return "VirusNotFound";
+    }
+};
 
 template<typename Virus>
 class VirusGenealogy {
@@ -62,30 +75,36 @@ class VirusGenealogy {
             return stem_id;
         }
         std::vector<typename Virus::id_type> get_parents(Virus::id_type const &id) const {
-            // TODO: sprawdzić, czy jest w tej mapie
+            if (!nodes.contains(id)) throw VirusNotFound();
             return nodes.at(id).parents;
         }
         bool exists(Virus::id_type const &id) const {
             return nodes.contains(id);
         }
         const Virus& operator[](typename Virus::id_type const &id) const {
-            // TODO: sprawdzić, czy jest w tej mapie
+            if (!nodes.contains(id)) throw VirusNotFound();
             return nodes.at(id).virus;
         }
         VirusGenealogy<Virus>::children_iterator get_children_begin(Virus::id_type const &id) const {
+            if (!nodes.contains(id)) throw VirusNotFound();
             return children_iterator(nodes.at(id).children, 0);
         }
         VirusGenealogy<Virus>::children_iterator get_children_end(Virus::id_type const &id) const {
+            if (!nodes.contains(id)) throw VirusNotFound();
             return children_iterator(nodes.at(id).children, nodes.at(id).children.size());
         }
         void create(Virus::id_type const &id, Virus::id_type const &parent_id) {
-            // TODO: co jezeli klucz id jest juz w mapie albo nie ma parent_id
+            if (nodes.contains(id)) throw VirusAlreadyCreated();
+            if (!nodes.contains(parent_id)) throw VirusNotFound();
             nodes.emplace(id, Node(id));
             nodes.at(id).parents.push_back(parent_id);
             nodes.at(parent_id).children.push_back(make_shared<Virus>(nodes.at(id).virus));
         }
         void create(typename Virus::id_type const &id, std::vector<typename Virus::id_type> const &parent_ids) {
-            // TODO: co jezeli klucz id jest juz w mapie albo nie ma parent_id
+            if (nodes.contains(id)) throw VirusAlreadyCreated();
+            for (typename Virus::id_type parent : parent_ids) { // czy to jest ok?
+                if (!nodes.contains(parent)) throw VirusNotFound();
+            }
             nodes.emplace(id, Node(id));
             for (typename Virus::id_type parent : parent_ids) {
                 nodes.at(id).parents.push_back(parent);
@@ -93,13 +112,13 @@ class VirusGenealogy {
             }
         }
         void connect(Virus::id_type const &child_id, Virus::id_type const &parent_id) {
-            // TODO: co jezeli klucz id jest juz w mapie albo nie ma parent_id
+            if (!nodes.contains(child_id) || !nodes.contains(parent_id)) throw VirusNotFound();
             if (std::find(nodes.at(child_id).parents.begin(), nodes.at(child_id).parents.end(), parent_id) != nodes.at(child_id).parents.end()) return;
             nodes.at(child_id).parents.push_back(parent_id);
             nodes.at(parent_id).children.push_back(make_shared<Virus>(nodes.at(child_id).virus));
         }
         void remove(Virus::id_type const &id) {
-            // TODO: co jeżeli taki wirus nie istnieje
+            if (!nodes.contains(id)) throw VirusNotFound();
             Node& node = nodes.at(id);
             // usuwamy krawędzie od rodziców
             for (typename Virus::id_type parent_id : node.parents) {

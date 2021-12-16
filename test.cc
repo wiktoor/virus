@@ -50,4 +50,14 @@ int main() {
     gen.remove("2");
     cout << "------------------------------------------------------\n";
     gen.printTree("1");
+    try {
+      //gen.create("3", "6");
+      gen.remove("2");
+    }
+    catch (std::exception &e) {
+      cout << e.what() << endl;
+    }
+    catch (...) {
+      cout << "halo\n";
+    }
 }
