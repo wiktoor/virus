@@ -20,6 +20,12 @@ struct VirusNotFound : public std::exception {
     }
 };
 
+struct TriedToRemoveStemVirus : public std::exception {
+    const char* what() const throw() {
+        return "TriedToRemoveStemVirus";
+    }
+};
+
 template<typename Virus>
 class VirusGenealogy {
     private:
@@ -118,6 +124,7 @@ class VirusGenealogy {
             nodes.at(parent_id).children.push_back(make_shared<Virus>(nodes.at(child_id).virus));
         }
         void remove(Virus::id_type const &id) {
+            if (id == stem_id) throw TriedToRemoveStemVirus();
             if (!nodes.contains(id)) throw VirusNotFound();
             Node& node = nodes.at(id);
             // usuwamy krawędzie od rodziców

@@ -52,6 +52,7 @@ int main() {
     gen.printTree("1");
     try {
       //gen.create("3", "6");
+      gen.remove("1");
       gen.remove("2");
     }
     catch (std::exception &e) {
