@@ -242,7 +242,7 @@ public:
             nodes.emplace(id, node);
         }
         catch (...) {
-             for (size_t j = 0; j < parent_ids.size(); j++) {
+            for (size_t j = 0; j < parent_ids.size(); j++) {
                 (parents_it[j]->second).children.pop_back();
             }
             throw;
@@ -264,6 +264,7 @@ public:
         }
         catch (...) {
             parent_ids.pop_back();
+            throw;
         }
     }
 
