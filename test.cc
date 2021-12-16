@@ -4,6 +4,8 @@ using namespace std;
 #include <iterator>
 #include <iostream>
 #include <vector>
+#include <concepts>
+#include <type_traits>
 
 class Virus {
   public:
@@ -20,8 +22,25 @@ class Virus {
     id_type id;
 };
 
+template <typename T>
+concept correctType = 
+requires (T x) {
+  { *x } -> same_as<const Virus &>;
+};
+
+template <typename T>
+concept correctChildrenIterator =  bidirectional_iterator<T> /* && correctType<T> */;
+
+template <typename T>
+requires correctChildrenIterator<T>
+void f(T x) { }
+
 int main() {
     VirusGenealogy<Virus> gen("1");
+    f(gen.get_children_begin("1"));
+    if (gen.get_children_begin("1") == gen.get_children_begin("1")) {
+      cout << "-------------------ok-------------------------------\n";
+    }
     //auto x = gen["1"];
     //cout << gen.exists("1") << endl;
     gen.create("2", "1");

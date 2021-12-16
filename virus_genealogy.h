@@ -56,6 +56,11 @@ class VirusGenealogy {
                 std::shared_ptr<std::vector<std::shared_ptr<Virus>>> vec;
                 size_t position;
             public:
+                using iterator_category = std::bidirectional_iterator_tag;
+                using value_type = Virus;
+                using difference_type = std::ptrdiff_t;
+                using pointer = std::shared_ptr<Virus>;
+                using reference = const Virus&;
                 children_iterator() {}
                 children_iterator(const std::vector<std::shared_ptr<Virus>>& vec, size_t position) : 
                     vec(std::make_shared<std::vector<std::shared_ptr<Virus>>>(vec)), position(position) {}
@@ -70,7 +75,7 @@ class VirusGenealogy {
                 children_iterator operator++(int) { children_iterator tmp = *this; ++(*this); return tmp; }
                 children_iterator& operator--() { position--; return *this; }
                 children_iterator operator--(int) { children_iterator tmp = *this; --(*this); return tmp; }
-                bool operator==(const children_iterator& a) { return this->position == a.position; }
+                bool operator==(const children_iterator& a) { return this->position == a.position && *(this->vec) == *(a.vec); }
                 bool operator!=(const children_iterator& a) { return !(*this == a); }
         };
         // using children_iterator = std::vector<std::shared_ptr<Virus>>::iterator;
