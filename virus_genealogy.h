@@ -149,11 +149,10 @@ public:
         nodes.emplace(stem_id, Node(stem_id));
     }
 
-    Virus::id_type get_stem_id() const noexcept {
+    Virus::id_type get_stem_id() const {
         return stem_id;
     }
 
-    // Pozmieniać na iteratory w poniższych funkcjach, bo kilka odwołań do tego samego klucza.
     std::vector<typename Virus::id_type> get_parents(Virus::id_type const &id) const {
         auto node_it = nodes.find(id);
         if (node_it == nodes.end())
@@ -192,16 +191,13 @@ public:
 
     void create(Virus::id_type const &id, Virus::id_type const &parent_id) {
         auto parent_it = nodes.find(parent_id);
-        // Jeśli contains rzuci wyjątek, to nie będzie to miało żadnych skutków ubocznych.
         if (nodes.contains(id))
             throw VirusAlreadyCreated();
         if (!nodes.contains(parent_id))
             throw VirusNotFound();
 
-        // Poniżej wyjątki nie będą miały skutków ubocznych.
         Node node(id);
         node.parents.push_back(parent_id);
-        // Tu jest przykład wrzucania kopii shared pointera.
         (parent_it->second).children.push_back(node.virus_ptr);
 
         try {
@@ -270,7 +266,7 @@ public:
         }
     }
 
-    void remove(Virus::id_type const &id) {
+    /*void remove(Virus::id_type const &id) {
         auto node_it = nodes.find(id);
 
         if (id == stem_id)
@@ -288,9 +284,80 @@ public:
             swap(nodes, nodes_copy);
             throw;
         }
+    }*/
+
+    void remove(Virus::id_type const &id) {
+        auto node_it = nodes.find(id);
+
+        if (id == stem_id)
+            throw TriedToRemoveStemVirus();
+        if (node_it == nodes.end())
+            throw VirusNotFound();
+
+        std::vector<typename Nodes_map_t::iterator> nodes_to_remove;
+        std::map<typename Virus::id_type, size_t> edges;
+        find_nodes_to_remove(id, edges, nodes_to_remove);
+
+        std::vector<typename Nodes_map_t::iterator> parents;
+        for (typename Virus::id_type parent_id : (node_it->second).parents) {
+            parents.push_back(nodes.find(parent_id));
+        }
+        for (auto parent_it : parents) {
+            for (size_t i = 0; i < (parent_it->second).children.size(); i++) {
+                if ((parent_it->second).children[i]->get_id() == id) {
+                    swap((parent_it->second).children[i], (parent_it->second).children.back());
+                    break;
+                }
+            }
+        }
+
+        std::vector<typename Nodes_map_t::iterator> nodes_in_subtree;
+        std::vector<size_t> parents_to_pop;
+        for (auto visits : edges) {
+            nodes_in_subtree.push_back(nodes.find(visits.first));
+            parents_to_pop.push_back((nodes_in_subtree.back()->second.parents.size()) - visits.second);
+        }
+
+        int j = 0;
+        for (auto nodes_in_subtree_it : nodes_in_subtree) {
+            for (size_t i = 0; i < parents_to_pop[j]; i++) {
+                (nodes_in_subtree_it->second).parents.pop_back();
+            }
+            j++;
+        }
+        for (auto parent_it : parents) {
+            (parent_it->second).children.pop_back();
+        }
+        for (auto it : nodes_to_remove) {
+            nodes.erase(it);
+        }
     }
 
 private:
+
+    void find_nodes_to_remove(Virus::id_type const &id,
+                              std::map<typename Virus::id_type, size_t> &edges,
+                              std::vector<typename Nodes_map_t::iterator>& nodes_to_remove) {
+        nodes_to_remove.push_back(nodes.find(id));
+
+        for (Virus_ptr_t virus_ptr : nodes.at(id).children) {
+            Node& child = nodes.at(virus_ptr->get_id());
+            typename Virus::id_type child_id = child.virus_ptr->get_id();
+            auto child_id_it = edges.find(child_id);
+            if (child_id_it == edges.end()) {
+                edges.emplace(child_id, child.parents.size());
+                child_id_it = edges.find(child_id);
+            }
+            size_t id_position = 0;
+            while (child.parents[id_position] != id) {
+                id_position++;
+            }
+            std::swap(child.parents[id_position], child.parents[(child_id_it->second) - 1]);
+            (child_id_it->second)--;
+            if (child_id_it->second == 0)
+                find_nodes_to_remove(child_id, edges, nodes_to_remove);
+        }
+    }
 
     void remove_edges_from_parents(Virus::id_type const &id) {
         for (typename Virus::id_type parent_id : nodes.at(id).parents) {
