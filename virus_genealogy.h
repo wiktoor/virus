@@ -1,3 +1,10 @@
+/*
+    Rozwiązanie piątego zadania zaliczeniowego z JNP
+    Magdalena Nieszporska nr indeksu 429982
+    Patryk Jędrzejczak nr indeksu 429285
+    Wiktor Chmielewski nr indeksu 429131
+*/
+
 #ifndef VIRUS_GENEALOGY_H
 #define VIRUS_GENEALOGY_H
 
@@ -5,9 +12,7 @@
 #include <memory>
 #include <map>
 #include <set>
-#include <algorithm>
 #include <exception>
-#include <iostream> // do usunięcia
 
 struct VirusAlreadyCreated : public std::exception {
     const char* what() const throw() {
@@ -35,44 +40,16 @@ class VirusGenealogy {
     using Virus_ptr_t = std::shared_ptr<Virus>;
     using Virus_ptrs_t = std::set<Virus_ptr_t>;
     using Virus_ids_t = std::set<typename Virus::id_type>;
-    // Przydałyby się jeszcze usingi na Virus::id_type (bo typename'y)
-    // i na std::vector<typename Virus::id_type>. Tylko używając ich
-    // zmieniamy wygląd interfejsu. Na przykład get_parents zwraca
-    // std::vector<typename Virus::id_type>, a jeśli zrobimy usinga,
-    // to będziemy mieć inną nazwę zwracanego typu. Nie wiem, czy tak można.
 
     struct Node {
 
-        // Tutaj typ zmienił się na pointer do wirusa. Możliwe, że wcześniej źle
-        // źle korzystaliśmy z shared pointerów. Funkcja make_shared tworzy nowy
-        // obiekt i zwraca wskaźnik do niego. Czyli nie powinniśmy jej używać,
-        // gdy chcemy stworzyć kolejny wskaźnik do już istniejącego obiektu,
-        // bo stworzyłaby nam nowy, identyczny obiekt. A przynajmniej w teorii
-        // tak mogłoby się stać, bo tego nie wykryliśmy. Tak czy siak, tak jak teraz
-        // mamy na pewno jest dobrze. Wywołujemy make_shared raz w konstruktorze
-        // Noda, a jak potem chcemy nowy wskaźnik do istniejącego wirusa, to
-        // kopiujemy wskaźnik virus_ptr.
         Virus_ptr_t virus_ptr = nullptr;
         Virus_ids_t parents;
         Virus_ptrs_t children;
 
         // Jeśli make_shared lub konstruktor wirusa rzuci wyjątek, virus_ptr będzie
-        // równy nullptr. Nie utworzymy wirusa, wszystko jest ok.
+        // równy nullptr. Nie utworzymy wirusa, nie będzie żadnych skutków ubocznych.
         Node(const Virus::id_type &id) : virus_ptr(std::make_shared<Virus>(id)) {}
-
-        // funkcje do testowania
-        void printNode() {
-            std::cout << "Jestem wierzchołkiem: " << virus_ptr->get_id() << std::endl;
-            std::cout << "Moi rodzice to: " << std::endl;
-            for (auto parent : parents) {
-                std::cout << parent << " ";
-            }
-            std::cout << std::endl << "Moi synowie to: " << std::endl;
-            for (auto ptr : children) {
-                std::cout << ptr->get_id() << " ";
-            }
-            std::cout << std::endl << std::endl;
-        }
 
     };
 
@@ -147,32 +124,33 @@ public:
 
     VirusGenealogy& operator=(const VirusGenealogy &other) = delete;
 
+    // Jeżeli gdzieś zostanie rzucony wyjątek, to nie dodamy nic do mapy,
+    // więc nie będzie żadnych skutków ubocznych.
     VirusGenealogy(const Virus::id_type &stem_id) : stem_id(stem_id) {
         nodes.emplace(stem_id, Node(stem_id));
     }
 
+    // Poniżej nie wprowadzamy żadnych zmian, więc mamy silną odporność na wyjątki.
     Virus::id_type get_stem_id() const {
         return stem_id;
     }
 
-    std::vector<typename Virus::id_type> get_parents(Virus::id_type const &id) const {
+    // Poniżej nie wprowadzamy żadnych zmian, więc mamy silną odporność na wyjątki.
+    std::vector<typename Virus::id_type> get_parents(const Virus::id_type &id) const {
         auto node_it = nodes.find(id);
         if (node_it == nodes.end())
             throw VirusNotFound();
 
-        std::vector<typename Virus::id_type> result;
-        for (typename Virus::id_type parent_id : (node_it->second).parents) {
-            result.push_back(parent_id);
-        }
-        //return std::vector<typename Virus::id_type>((node_it->second).parents.begin(), (node_it->second).parents.end());
-        return result;
+        return std::vector<typename Virus::id_type>((node_it->second).parents.begin(), (node_it->second).parents.end());
     }
 
-    bool exists(Virus::id_type const &id) const {
+    // Poniżej nie wprowadzamy żadnych zmian, więc mamy silną odporność na wyjątki.
+    bool exists(const Virus::id_type &id) const {
         return nodes.contains(id);
     }
 
-    const Virus& operator[](typename Virus::id_type const &id) const {
+    // Poniżej nie wprowadzamy żadnych zmian, więc mamy silną odporność na wyjątki.
+    const Virus& operator[](const typename Virus::id_type &id) const {
         auto node_it = nodes.find(id);
         if (node_it == nodes.end())
             throw VirusNotFound();
@@ -180,7 +158,8 @@ public:
         return *((node_it->second).virus_ptr);
     }
 
-    VirusGenealogy<Virus>::children_iterator get_children_begin(Virus::id_type const &id) const {
+    // Poniżej nie wprowadzamy żadnych zmian, więc mamy silną odporność na wyjątki.
+    VirusGenealogy<Virus>::children_iterator get_children_begin(const Virus::id_type &id) const {
         auto node_it = nodes.find(id);
         if (node_it == nodes.end())
             throw VirusNotFound();
@@ -188,7 +167,8 @@ public:
         return children_iterator((node_it->second).children.begin());
     }
 
-    VirusGenealogy<Virus>::children_iterator get_children_end(Virus::id_type const &id) const {
+    // Poniżej nie wprowadzamy żadnych zmian, więc mamy silną odporność na wyjątki.
+    VirusGenealogy<Virus>::children_iterator get_children_end(const Virus::id_type &id) const {
         auto node_it = nodes.find(id);
         if (node_it == nodes.end())
             throw VirusNotFound();
@@ -196,7 +176,7 @@ public:
         return children_iterator((node_it->second).children.end());
     }
 
-    void create(Virus::id_type const &id, Virus::id_type const &parent_id) {
+    void create(const Virus::id_type &id, const Virus::id_type &parent_id) {
         auto parent_it = nodes.find(parent_id);
         if (nodes.contains(id))
             throw VirusAlreadyCreated();
@@ -204,20 +184,24 @@ public:
             throw VirusNotFound();
 
         Node node(id);
+        // Do tego momentu nie wprowadzaliśmy żadnych zmian, więc była silna odporność.
+        // Poniższy insert jest w lokalnym obiekcie, więc w przypadku rzucenia wyjątku nie musimy go cofać.
         node.parents.insert(parent_id);
-        auto it = (parent_it->second).children.insert(node.virus_ptr);
+        auto insert_result = (parent_it->second).children.insert(node.virus_ptr);
 
         try {
+            // Jeżeli poniższy emplace wyrzuci wyjątek, to musimy cofnąć powyższego inserta.
             nodes.emplace(id, node);
         }
         catch (...) {
-            // pop_back() jest noexpept na niepustym vectorze
-            (parent_it->second).children.erase(it.first);
+            // erase() na secie jest noexcept, gdy parametrem jest iterator
+            (parent_it->second).children.erase(insert_result.first);
             throw;
         }
     }
 
-    void create(typename Virus::id_type const &id, std::vector<typename Virus::id_type> const &parent_ids) {
+    void create(const typename Virus::id_type &id, const std::vector<typename Virus::id_type> &parent_ids) {
+        // Poniższy obiekt jest lokalny, więc w przypadku rzucenia wyjątku nie musimy ich cofać zmian na nim.
         std::vector<typename Nodes_map_t::iterator> parent_its;
         for (typename Virus::id_type parent_id : parent_ids) {
             parent_its.push_back(nodes.find(parent_id));
@@ -232,29 +216,32 @@ public:
         if (parent_ids.empty())
             return;
 
+        // Poniższy obiekt jest lokalny, więc w przypadku rzucenia wyjątku nie musimy ich cofać zmian na nim.
         Node node(id);
         for (typename Virus::id_type parent_id : parent_ids) {
             node.parents.insert(parent_id);
         }
 
-        std::vector<std::pair<typename Virus_ptrs_t::iterator, bool>> its(parent_ids.size());
+        std::vector<std::pair<typename Virus_ptrs_t::iterator, bool>> insert_results(parent_ids.size());
         try {
+            // Jeżeli poniższy kod rzuci wyjątek, to musimy cofnąć zmiany, które zostały przez niego wprowadzone
             for (size_t next_id = 0; next_id < parent_ids.size(); next_id++) {
-                its[next_id] = (parent_its[next_id]->second).children.insert(node.virus_ptr);
+                insert_results[next_id] = (parent_its[next_id]->second).children.insert(node.virus_ptr);
             }
             nodes.emplace(id, node);
         }
         catch (...) {
             for (size_t j = 0; j < parent_ids.size(); j++) {
-                if (!its[j].second)
+                if (!insert_results[j].second)
                     break;
-                (parent_its[j]->second).children.erase(its[j].first);
+                // erase() na secie jest noexcept, gdy parametrem jest iterator
+                (parent_its[j]->second).children.erase(insert_results[j].first);
             }
             throw;
         }
     }
 
-    void connect(Virus::id_type const &child_id, Virus::id_type const &parent_id) {
+    void connect(const Virus::id_type &child_id, const Virus::id_type &parent_id) {
         auto child_it = nodes.find(child_id);
         auto parent_it = nodes.find(parent_id);
 
@@ -265,8 +252,10 @@ public:
         if (parent_ids.find(parent_id) != parent_ids.end())
             return;
 
+        // Do tego momentu wprowadzaliśmy zmiany jedynie na lokalnych obiektach, więc była silna odporność.
         auto parent_id_it = parent_ids.insert(parent_id);
         try {
+            // Jeżeli poniższy insert się nie powiedzie, to musimy cofnąć powyższy insert.
             (parent_it->second).children.insert((child_it->second).virus_ptr);
         }
         catch (...) {
@@ -275,124 +264,99 @@ public:
         }
     }
 
-    /*void remove(Virus::id_type const &id) {
-        auto node_it = nodes.find(id);
-
+    // Najpierw znajdujemy iteratory do wszystkich usuwanych obiektów (tu może zostać rzucony wyjątek),
+    // a potem usuwamy wszystko noexcept korzystając z tych iteratorów.
+    void remove(const Virus::id_type &id) {
         if (id == stem_id)
             throw TriedToRemoveStemVirus();
-        if (node_it == nodes.end())
+        if (!nodes.contains(id))
             throw VirusNotFound();
 
-        Nodes_map_t nodes_copy = nodes;
-
-        try {
-            remove_edges_from_parents(id);
-            remove_descendant(id);
-        }
-        catch (...) {
-            swap(nodes, nodes_copy);
-            throw;
-        }
-    }*/
-
-    void remove(Virus::id_type const &id) {
-        auto node_it = nodes.find(id);
-
-        if (id == stem_id)
-            throw TriedToRemoveStemVirus();
-        if (node_it == nodes.end())
-            throw VirusNotFound();
-
+        // W poniższym fragmencie kodu znajdujemy iteratory obiektów do usunięcia.
         std::vector<typename Nodes_map_t::iterator> nodes_to_remove;
-        std::map<typename Virus::id_type, std::vector<typename Virus_ids_t::iterator>> edges;
-        find_nodes_to_remove(id, edges, nodes_to_remove);
+        std::map<typename Virus::id_type, std::vector<typename Virus_ids_t::iterator>> parent_ids_to_remove;
+        find_nodes_to_remove(id, parent_ids_to_remove, nodes_to_remove);
 
-        std::vector<typename Nodes_map_t::iterator> parents;
-        std::vector<typename Virus_ptrs_t::iterator> id_pos;
-        for (typename Virus::id_type parent_id : (node_it->second).parents) {
-            parents.push_back(nodes.find(parent_id));
-        }
-        for (auto parent_it : parents) {
-            auto child_it = (parent_it->second).children.begin();
-            for (; child_it != (parent_it->second).children.end(); child_it++) {
-                if ((*child_it)->get_id() == id) {
-                    id_pos.push_back(child_it);
-                    break;
-                }
-            }
-        }
+        std::vector<typename Nodes_map_t::iterator> parent_its;
+        std::vector<typename Virus_ptrs_t::iterator> position_in_children;
+        find_parents_of_node_to_remove(id, parent_its, position_in_children);
 
-        std::vector<typename Nodes_map_t::iterator> nodes_in_subtree;
-        std::vector<std::vector<typename Virus_ids_t::iterator>> edges_to_remove;
-        for (auto vert : edges) {
-            nodes_in_subtree.push_back(nodes.find(vert.first));
-            edges_to_remove.push_back(vert.second);
-        }
+        std::vector<typename Nodes_map_t::iterator> affected_nodes;
+        std::vector<std::vector<typename Virus_ids_t::iterator>> deleted_parents;
+        find_affected_nodes(parent_ids_to_remove, affected_nodes, deleted_parents);
 
-        for (size_t i = 0; i < nodes_in_subtree.size(); i++) {
-            for (size_t j = 0; j < edges_to_remove[i].size(); j++) {
-                (nodes_in_subtree[i]->second).parents.erase(edges_to_remove[i][j]);
-            }
-        }
-        for (size_t i = 0; i < parents.size(); i++) {
-            (parents[i]->second).children.erase(id_pos[i]);
-        }
-        for (auto it : nodes_to_remove) {
-            nodes.erase(it);
-        }
+        // Od tego momentu zaczynamy wprowadzać zmiany, ale robimy to noexcept.
+        update_parents_of_node_to_remove(parent_its, position_in_children);
+        delete_parents_of_affected_nodes(affected_nodes, deleted_parents);
+        delete_nodes(nodes_to_remove);
     }
 
 private:
 
-    void find_nodes_to_remove(Virus::id_type const &id,
-                              std::map<typename Virus::id_type, std::vector<typename Virus_ids_t::iterator>> &edges,
+    void find_nodes_to_remove(const Virus::id_type &id,
+                              std::map<typename Virus::id_type, std::vector<typename Virus_ids_t::iterator>> &parent_ids_to_remove,
                               std::vector<typename Nodes_map_t::iterator> &nodes_to_remove) {
         nodes_to_remove.push_back(nodes.find(id));
 
         for (const Virus_ptr_t &virus_ptr : nodes.at(id).children) {
             Node& child = nodes.at(virus_ptr->get_id());
             typename Virus::id_type child_id = child.virus_ptr->get_id();
-            if (edges.find(child_id) == edges.end()) {
-                edges.emplace(child_id, std::vector<typename Virus_ids_t::iterator>());
+            if (parent_ids_to_remove.find(child_id) == parent_ids_to_remove.end()) {
+                parent_ids_to_remove.emplace(child_id, std::vector<typename Virus_ids_t::iterator>());
             }
-            edges.at(child_id).push_back(child.parents.find(id));
+
+            parent_ids_to_remove.at(child_id).push_back(child.parents.find(id));
             
-            if (edges.at(child_id).size() == child.parents.size())
-                find_nodes_to_remove(child_id, edges, nodes_to_remove);
+            if (parent_ids_to_remove.at(child_id).size() == child.parents.size())
+                find_nodes_to_remove(child_id, parent_ids_to_remove, nodes_to_remove);
         }
     }
 
-    void remove_edges_from_parents(Virus::id_type const &id) {
+    void find_parents_of_node_to_remove(const Virus::id_type &id,
+                                        std::vector<typename Nodes_map_t::iterator> &parent_its,
+                                        std::vector<typename Virus_ptrs_t::iterator> &position_in_children) {
         for (typename Virus::id_type parent_id : nodes.at(id).parents) {
-            Node& parent = nodes.at(parent_id);
-            for (size_t i = 0; i < parent.children.size(); i++) {
-                if (parent.children[i]->get_id() == id) {
-                    swap(parent.children[i], parent.children.back());
-                    parent.children.pop_back();
+            parent_its.push_back(nodes.find(parent_id));
+        }
+        for (auto parent_it : parent_its) {
+            auto child_it = (parent_it->second).children.begin();
+            for (; child_it != (parent_it->second).children.end(); child_it++) {
+                if ((*child_it)->get_id() == id) {
+                    position_in_children.push_back(child_it);
                     break;
                 }
             }
         }
     }
 
-    void remove_descendant(Virus::id_type const &id) {
-        for (Virus_ptr_t virus_ptr : nodes.at(id).children) {
-            Node& child = nodes.at(virus_ptr->get_id());
-            child.parents.erase(std::find(child.parents.begin(), child.parents.end(), id));
-            if (child.parents.size() == 0)
-                remove_descendant(child.virus_ptr->get_id());
+    void find_affected_nodes(const std::map<typename Virus::id_type, std::vector<typename Virus_ids_t::iterator>> &parent_ids_to_remove,
+                             std::vector<typename Nodes_map_t::iterator> &affected_nodes,
+                             std::vector<std::vector<typename Virus_ids_t::iterator>> &deleted_parents) {
+        for (auto affected_node : parent_ids_to_remove) {
+            affected_nodes.push_back(nodes.find(affected_node.first));
+            deleted_parents.push_back(affected_node.second);
         }
-
-        nodes.erase(id);
     }
 
+    void delete_parents_of_affected_nodes(const std::vector<typename Nodes_map_t::iterator> &affected_nodes,
+                                          const std::vector<std::vector<typename Virus_ids_t::iterator>> &deleted_parents) {
+        for (size_t i = 0; i < affected_nodes.size(); i++) {
+            for (size_t j = 0; j < deleted_parents[i].size(); j++) {
+                (affected_nodes[i]->second).parents.erase(deleted_parents[i][j]);
+            }
+        }
+    }
 
-    // funkcje do testowania
-public:    void printTree(Virus::id_type const &id) {
-        Node& node = nodes.at(id);
-        node.printNode();
-        for (auto ptr : node.children) {
-            printTree(ptr->get_id());
+    void update_parents_of_node_to_remove(const std::vector<typename Nodes_map_t::iterator> &parent_its,
+                                          const std::vector<typename Virus_ptrs_t::iterator> &position_in_children) {
+        for (size_t i = 0; i < parent_its.size(); i++) {
+            (parent_its[i]->second).children.erase(position_in_children[i]);
+        }
+    }
+
+    void delete_nodes(const std::vector<typename Nodes_map_t::iterator> &nodes_to_remove) {
+        for (auto it : nodes_to_remove) {
+            nodes.erase(it);
         }
     }
 
