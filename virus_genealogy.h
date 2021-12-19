@@ -4,6 +4,7 @@
 #include <vector>
 #include <memory>
 #include <map>
+#include <set>
 #include <algorithm>
 #include <exception>
 #include <iostream> // do usunięcia
@@ -32,7 +33,8 @@ class VirusGenealogy {
     Virus::id_type stem_id;
 
     using Virus_ptr_t = std::shared_ptr<Virus>;
-    using Virus_ptrs_t = std::vector<Virus_ptr_t>;
+    using Virus_ptrs_t = std::set<Virus_ptr_t>;
+    using Virus_ids_t = std::set<typename Virus::id_type>;
     // Przydałyby się jeszcze usingi na Virus::id_type (bo typename'y)
     // i na std::vector<typename Virus::id_type>. Tylko używając ich
     // zmieniamy wygląd interfejsu. Na przykład get_parents zwraca
@@ -51,7 +53,7 @@ class VirusGenealogy {
         // Noda, a jak potem chcemy nowy wskaźnik do istniejącego wirusa, to
         // kopiujemy wskaźnik virus_ptr.
         Virus_ptr_t virus_ptr = nullptr;
-        std::vector<typename Virus::id_type> parents;
+        Virus_ids_t parents;
         Virus_ptrs_t children;
 
         // Jeśli make_shared lub konstruktor wirusa rzuci wyjątek, virus_ptr będzie
@@ -158,7 +160,12 @@ public:
         if (node_it == nodes.end())
             throw VirusNotFound();
 
-        return (node_it->second).parents;
+        std::vector<typename Virus::id_type> result;
+        for (typename Virus::id_type parent_id : (node_it->second).parents) {
+            result.push_back(parent_id);
+        }
+        //return std::vector<typename Virus::id_type>((node_it->second).parents.begin(), (node_it->second).parents.end());
+        return result;
     }
 
     bool exists(Virus::id_type const &id) const {
@@ -197,15 +204,15 @@ public:
             throw VirusNotFound();
 
         Node node(id);
-        node.parents.push_back(parent_id);
-        (parent_it->second).children.push_back(node.virus_ptr);
+        node.parents.insert(parent_id);
+        auto it = (parent_it->second).children.insert(node.virus_ptr);
 
         try {
             nodes.emplace(id, node);
         }
         catch (...) {
             // pop_back() jest noexpept na niepustym vectorze
-            (parent_it->second).children.pop_back();
+            (parent_it->second).children.erase(it.first);
             throw;
         }
     }
@@ -227,19 +234,21 @@ public:
 
         Node node(id);
         for (typename Virus::id_type parent_id : parent_ids) {
-            node.parents.push_back(parent_id);
+            node.parents.insert(parent_id);
         }
 
-        size_t next_id = 0;
+        std::vector<std::pair<typename Virus_ptrs_t::iterator, bool>> its(parent_ids.size());
         try {
-            for (; next_id < parent_ids.size(); next_id++) {
-                (parent_its[next_id]->second).children.push_back(node.virus_ptr);
+            for (size_t next_id = 0; next_id < parent_ids.size(); next_id++) {
+                its[next_id] = (parent_its[next_id]->second).children.insert(node.virus_ptr);
             }
             nodes.emplace(id, node);
         }
         catch (...) {
-            for (size_t j = 0; j < next_id; j++) {
-                (parent_its[j]->second).children.pop_back();
+            for (size_t j = 0; j < parent_ids.size(); j++) {
+                if (!its[j].second)
+                    break;
+                (parent_its[j]->second).children.erase(its[j].first);
             }
             throw;
         }
@@ -252,16 +261,16 @@ public:
         if (child_it == nodes.end() || parent_it == nodes.end())
             throw VirusNotFound();
 
-        std::vector<typename Virus::id_type>& parent_ids = (child_it->second).parents;
-        if (std::find(parent_ids.begin(), parent_ids.end(), parent_id) != parent_ids.end())
+        Virus_ids_t& parent_ids = (child_it->second).parents;
+        if (parent_ids.find(parent_id) != parent_ids.end())
             return;
 
-        parent_ids.push_back(parent_id);
+        auto parent_id_it = parent_ids.insert(parent_id);
         try {
-            (parent_it->second).children.push_back((child_it->second).virus_ptr);
+            (parent_it->second).children.insert((child_it->second).virus_ptr);
         }
         catch (...) {
-            parent_ids.pop_back();
+            parent_ids.erase(parent_id_it.first);
             throw;
         }
     }
@@ -295,38 +304,38 @@ public:
             throw VirusNotFound();
 
         std::vector<typename Nodes_map_t::iterator> nodes_to_remove;
-        std::map<typename Virus::id_type, size_t> edges;
+        std::map<typename Virus::id_type, std::vector<typename Virus_ids_t::iterator>> edges;
         find_nodes_to_remove(id, edges, nodes_to_remove);
 
         std::vector<typename Nodes_map_t::iterator> parents;
+        std::vector<typename Virus_ptrs_t::iterator> id_pos;
         for (typename Virus::id_type parent_id : (node_it->second).parents) {
             parents.push_back(nodes.find(parent_id));
         }
         for (auto parent_it : parents) {
-            for (size_t i = 0; i < (parent_it->second).children.size(); i++) {
-                if ((parent_it->second).children[i]->get_id() == id) {
-                    swap((parent_it->second).children[i], (parent_it->second).children.back());
+            auto child_it = (parent_it->second).children.begin();
+            for (; child_it != (parent_it->second).children.end(); child_it++) {
+                if ((*child_it)->get_id() == id) {
+                    id_pos.push_back(child_it);
                     break;
                 }
             }
         }
 
         std::vector<typename Nodes_map_t::iterator> nodes_in_subtree;
-        std::vector<size_t> parents_to_pop;
-        for (auto visits : edges) {
-            nodes_in_subtree.push_back(nodes.find(visits.first));
-            parents_to_pop.push_back((nodes_in_subtree.back()->second.parents.size()) - visits.second);
+        std::vector<std::vector<typename Virus_ids_t::iterator>> edges_to_remove;
+        for (auto vert : edges) {
+            nodes_in_subtree.push_back(nodes.find(vert.first));
+            edges_to_remove.push_back(vert.second);
         }
 
-        int j = 0;
-        for (auto nodes_in_subtree_it : nodes_in_subtree) {
-            for (size_t i = 0; i < parents_to_pop[j]; i++) {
-                (nodes_in_subtree_it->second).parents.pop_back();
+        for (size_t i = 0; i < nodes_in_subtree.size(); i++) {
+            for (size_t j = 0; j < edges_to_remove[i].size(); j++) {
+                (nodes_in_subtree[i]->second).parents.erase(edges_to_remove[i][j]);
             }
-            j++;
         }
-        for (auto parent_it : parents) {
-            (parent_it->second).children.pop_back();
+        for (size_t i = 0; i < parents.size(); i++) {
+            (parents[i]->second).children.erase(id_pos[i]);
         }
         for (auto it : nodes_to_remove) {
             nodes.erase(it);
@@ -336,25 +345,19 @@ public:
 private:
 
     void find_nodes_to_remove(Virus::id_type const &id,
-                              std::map<typename Virus::id_type, size_t> &edges,
-                              std::vector<typename Nodes_map_t::iterator>& nodes_to_remove) {
+                              std::map<typename Virus::id_type, std::vector<typename Virus_ids_t::iterator>> &edges,
+                              std::vector<typename Nodes_map_t::iterator> &nodes_to_remove) {
         nodes_to_remove.push_back(nodes.find(id));
 
-        for (Virus_ptr_t virus_ptr : nodes.at(id).children) {
+        for (const Virus_ptr_t &virus_ptr : nodes.at(id).children) {
             Node& child = nodes.at(virus_ptr->get_id());
             typename Virus::id_type child_id = child.virus_ptr->get_id();
-            auto child_id_it = edges.find(child_id);
-            if (child_id_it == edges.end()) {
-                edges.emplace(child_id, child.parents.size());
-                child_id_it = edges.find(child_id);
+            if (edges.find(child_id) == edges.end()) {
+                edges.emplace(child_id, std::vector<typename Virus_ids_t::iterator>());
             }
-            size_t id_position = 0;
-            while (child.parents[id_position] != id) {
-                id_position++;
-            }
-            std::swap(child.parents[id_position], child.parents[(child_id_it->second) - 1]);
-            (child_id_it->second)--;
-            if (child_id_it->second == 0)
+            edges.at(child_id).push_back(child.parents.find(id));
+            
+            if (edges.at(child_id).size() == child.parents.size())
                 find_nodes_to_remove(child_id, edges, nodes_to_remove);
         }
     }
